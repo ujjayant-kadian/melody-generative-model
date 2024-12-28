@@ -1,0 +1,15 @@
+0.943502 M parameters
+step 0: train loss 2.6607, val loss 2.6690, perplexity  14.4254
+step 500: train loss 1.7032, val loss 1.6212, perplexity  5.0591
+step 1000: train loss 1.4956, val loss 1.4434, perplexity  4.2352
+step 1500: train loss 1.3790, val loss 1.3462, perplexity  3.8429
+step 2000: train loss 1.3236, val loss 1.3059, perplexity  3.6912
+step 2500: train loss 1.2797, val loss 1.2602, perplexity  3.5262
+step 3000: train loss 1.2343, val loss 1.2274, perplexity  3.4125
+step 3500: train loss 1.2268, val loss 1.2323, perplexity  3.4292
+step 4000: train loss 1.2066, val loss 1.2156, perplexity  3.3722
+step 4500: train loss 1.1829, val loss 1.1970, perplexity  3.3103
+step 4999: train loss 1.1572, val loss 1.1841, perplexity  3.2677
+Saving model to gpt_melody_model.pt
+Generated Melody: 
+aggdFdgFddddFadgRccccRcgaEFCCaAaccdRagddCagRcCagcCaFFcRFgFagagFgaFaFcdCcRFgcaEFgFgFgRgFagagFagagCgFR
