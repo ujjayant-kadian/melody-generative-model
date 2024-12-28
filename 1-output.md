@@ -2,7 +2,7 @@
 ## Analysis of the model's training progress and generated output:
 
 ### Output on the first architecture (minmal changes):
-'''bash
+```bash
 0.943502 M parameters
 step 0: train loss 2.6607, val loss 2.6690, perplexity  14.4254
 step 500: train loss 1.7032, val loss 1.6212, perplexity  5.0591
@@ -18,7 +18,7 @@ step 4999: train loss 1.1572, val loss 1.1841, perplexity  3.2677
 Saving model to gpt_melody_model.pt
 Generated Melody: 
 aggdFdgFddddFadgRccccRcgaEFCCaAaccdRagddCagRcCagcCaFFcRFgFagagFgaFaFcdCcRFgcaEFgFgFgRgFagagFagagCgFR
-'''
+```
 
 ### **1. Training Performance**
 - **Initial Loss and Perplexity**:
