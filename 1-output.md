@@ -1,7 +1,7 @@
 # 1st Attempt:
 ## Analysis of the model's training progress and generated output:
 
-### Output on the first architecture (minmal changes):
+### Output on the first architecture:
 ```bash
 0.943502 M parameters
 step 0: train loss 2.6607, val loss 2.6690, perplexity  14.4254
