@@ -206,11 +206,12 @@ def calculate_perplexity(loss):
 def generate_random_melody(length):
     return ''.join(random.choices(chars, k=length))
 
+model = GPTLanguageModel().to(device)
 if os.path.exists(model_save_path):
     print(f"Loading model from {model_save_path}")
-    model = torch.load(model_save_path, map_location=device)
+    model.load_state_dict(torch.load(model_save_path, map_location=device, weights_only=True))
+    model.eval()
 else:
-    model = GPTLanguageModel().to(device)
 
     # print the number of parameters in the model
     print(sum(p.numel() for p in model.parameters())/1e6, 'M parameters')
