@@ -67,11 +67,9 @@ def create_sequence(note_sequence, duration_ms=500):
 #sequence = "C C G G A A G F F E E D D C G G F F E E D G G F F E E D C C G G A A G F F E E D D C".split()
 sequence = "BDDgEARagadGCCdddEgfgcDEAGBDEFgA"
 
-def play_melody(sequence, duration_ms=500):
+def play_melody(sequence, name, duration_ms=500):
     song = create_sequence(sequence, duration_ms)
-    song.export("generated_melody.wav", format="wav")
-    wave_obj = sa.WaveObject.from_wave_file("generated_melody.wav")
-    play_obj = wave_obj.play()
-    play_obj.wait_done()
+    song.export(f"{name}.wav", format="wav")
+    wave_obj = sa.WaveObject.from_wave_file(f"{name}.wav")
 
 # play_melody(sequence)

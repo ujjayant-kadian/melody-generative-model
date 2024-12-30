@@ -204,7 +204,7 @@ def calculate_perplexity(loss):
 
 # Baseline comparison
 def generate_random_melody(length):
-    return ''.join(random.choice(chars, k=length))
+    return ''.join(random.choices(chars, k=length))
 
 if os.path.exists(model_save_path):
     print(f"Loading model from {model_save_path}")
@@ -238,15 +238,15 @@ else:
     print(f"Saving model to {model_save_path}")
     torch.save(model.state_dict(), model_save_path)
 
+valid_chars = set("".join(NOTE_FREQUENCIES.keys()))
 # generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
 generated_sequence = decode(model.generate(context, max_new_tokens=100)[0].tolist())
 print("Generated Melody:", generated_sequence)
-valid_chars = set("".join(NOTE_FREQUENCIES.keys()))
 filtered_sequence = "".join([char for char in generated_sequence if char in valid_chars])
-play_melody(filtered_sequence)
+play_melody(filtered_sequence, "generated_melody")
 #open('more.txt', 'w').write(decode(m.generate(context, max_new_tokens=10000)[0].tolist()))
 
-baseline_melody = generate_random_melody(100)
+baseline_melody = "".join([char for char in generate_random_melody(100) if char in valid_chars])
 print("Baseline Melody:", baseline_melody)
-play_melody(baseline_melody)
+play_melody(baseline_melody, "baseline_melody")

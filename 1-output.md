@@ -1,7 +1,7 @@
 # 1st Attempt:
 ## Analysis of the model's training progress and generated output:
 
-### Output on the first architecture:
+### Output:
 ```bash
 0.943502 M parameters
 step 0: train loss 2.6607, val loss 2.6690, perplexity  14.4254
@@ -18,56 +18,73 @@ step 4999: train loss 1.1572, val loss 1.1841, perplexity  3.2677
 Saving model to gpt_melody_model.pt
 Generated Melody: 
 aggdFdgFddddFadgRccccRcgaEFCCaAaccdRagddCagRcCagcCaFFcRFgFagagFgaFaFcdCcRFgcaEFgFgFgRgFagagFagagCgFR
+Baseline Melody: EFBcdEGCcgfERDDAdAFBgdRfCAEGaRFCDCDCdCCdDdADaggcAfdaRdRgECdEADgDdBgFaCCfCfgcBGGdcBFfcGBDFDEa
 ```
 
 ### **1. Training Performance**
-- **Initial Loss and Perplexity**:
-  - At step 0, the training loss is **2.6607** and perplexity is **14.4254**. This high perplexity indicates the model is initially uncertain about predicting the next token.
-  
-- **Progression**:
-  - Over 5000 iterations, the training loss decreases steadily to **1.1572** and the validation loss to **1.1841**. This shows the model is learning effectively without significant overfitting, as the gap between training and validation loss remains small.
-  - The perplexity reduces to **3.2677**, indicating a significant improvement in the model's ability to predict sequences.
+The training performance metrics and their implications are as follows:
 
-- **Stable Convergence**:
-  - After 3000 steps, the training loss flattens out, with smaller gains in perplexity. This suggests the model has reached a plateau in learning, capturing most of the patterns in the dataset.
+#### **Key Observations**
+- **Loss Reduction**:
+  - Training loss starts at **2.6607** and reduces steadily to **1.1572**.
+  - Validation loss decreases from **2.6690** to **1.1841**, with only a minor gap between training and validation losses, indicating the model generalizes well without overfitting.
 
----
+- **Perplexity**:
+  - Perplexity decreases significantly from **14.4254** to **3.2677**, showing that the model improves its ability to predict the next token in the melody sequence.
 
-### **2. Generated Melody**
-- **Structure**:
-  - The melody is diverse and includes patterns like repeating sequences (`FagagFagag`, `RFgF`), alternating notes, and rest tokens (`R`).
-  - It maintains logical combinations of notes and rests, suggesting the model has learned meaningful patterns from the dataset.
-
-- **Musical Quality**:
-  - The melody appears to be somewhat rhythmically coherent with structured transitions.
-
-- **Potential Issue**:
-  - There are some repetitive patterns (`FagagFagag`) that might indicate the model relies on learned patterns rather than exploring broader combinations.
+#### **Implications**
+- The consistent reduction in loss and perplexity demonstrates that the model effectively learns the patterns in the dataset.
+- The flattening of loss and perplexity towards the later iterations suggests the model has likely converged.
 
 ---
 
-### **Strengths of the Model**
+### **2. Melody Generated**
+The generated melody and baseline melody highlight the following:
+
+#### **Generated Melody**
+```
+aggdFdgFddddFadgRccccRcgaEFCCaAaccdRagddCagRcCagcCaFFcRFgFagagFgaFaFcdCcRFgcaEFgFgFgRgFagagFagagCgFR
+```
+
+#### **Baseline Melody**
+```
+EFBcdEGCcgfERDDAdAFBgdRfCAEGaRFCDCDCdCCdDdADaggcAfdaRdRgECdEADgDdBgFaCCfCfgcBGGdcBFfcGBDFDEa
+```
+
+#### **Subjective Analysis**
+1. **Rhythmic Coherence**:
+   - The generated melody shows slight rhythmic structure (e.g., repeated patterns like `FagagFagag`), but overall, it lacks consistent rhythmic coherence.
+   - The baseline melody is entirely random, with no rhythmic or structural elements, making it harder to perceive as a melody.
+
+2. **Musical Hints**:
+   - The generated melody has moments that suggest learned musical patterns (e.g., logical note transitions, periodic rests `R`), but these are not sustained over longer sequences.
+   - The baseline melody appears random with no discernible musicality.
+
+#### **Observations**
+- While the generated melody is marginally better than the baseline, it still falls short of producing rhythmically or musically coherent melodies.
+- The minute rhythmic coherence in the generated melody indicates the model has learned some patterns but struggles to extend them effectively across the sequence.
+
+---
+
+### **3. Final Summary of the Model**
+
+#### **Strengths**:
 1. **Effective Training**:
-   - Consistent reduction in loss and perplexity shows the model has successfully learned from the dataset.
-   - The small gap between training and validation losses indicates good generalization.
+   - The model trains efficiently, showing consistent reductions in loss and perplexity.
+   - It avoids overfitting, as seen in the minimal gap between training and validation metrics.
 
-2. **Musical Diversity**:
-   - The generated sequence avoids monotony and includes rests (`R`) alongside varied note combinations.
+2. **Basic Pattern Learning**:
+   - The model has learned basic musical patterns (e.g., logical note transitions and occasional rhythmic hints).
 
-3. **Logical Patterns**:
-   - The model generates sequences that mimic the structure of real melodies, balancing repetition and variation.
+3. **Efficiency**:
+   - With fewer than 1 million parameters, the model strikes a balance between simplicity and learning capacity.
 
----
+#### **Weaknesses**:
+1. **Lack of Rhythmic Coherence**:
+   - The generated melodies lack sustained rhythmic structure, which is crucial for musical coherence.
 
-### **Areas for Improvement**
-1. **Repetition**:
-   - The model sometimes generates repetitive patterns, which may reduce musical creativity.
-   - Possible Fix: Increase dataset diversity or modify the architecture (e.g., longer attention spans).
+2. **Short-Term Memory**:
+   - The model struggles to maintain learned patterns across longer sequences, likely due to the limited depth (2 layers) and small embedding size (192).
 
-2. **Musical Rules**:
-   - Evaluate the adherence of generated melodies to musical rules (e.g., scales, key signatures, rhythm consistency).
-   - Possible Fix: Post-process melodies using rule-based filtering or scoring.
-
-3. **Perplexity Plateau**:
-   - Perplexity levels off at around **3.2677**, suggesting the model has learned most of the dataset’s patterns.
-   - Possible Fix: Experiment with larger models, different architectures (e.g., transformers with more layers), or fine-tuning on additional data.
+3. **Baseline Comparison**:
+   - While the generated melody outperforms the baseline, the improvement is marginal, indicating room for significant enhancement.
