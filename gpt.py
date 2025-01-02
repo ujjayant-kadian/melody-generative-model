@@ -4,6 +4,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 import random
 from melodyPlay import NOTE_FREQUENCIES, play_melody
+from scipy.stats import entropy
+import numpy as np
+from nltk.util import ngrams
+from collections import Counter
 
 # hyperparameters
 batch_size = 64
@@ -251,3 +255,51 @@ play_melody(filtered_sequence, "generated_melody")
 baseline_melody = "".join([char for char in generate_random_melody(100) if char in valid_chars])
 print("Baseline Melody:", baseline_melody)
 play_melody(baseline_melody, "baseline_melody")
+
+# Objective Evaluation: Fidelity
+
+def get_note_distribution(sequence, vocab, epsilon=1e-8):
+    """Calculate note distribution as normalized frequency to see how closely the distribution
+    of notes in generated melody matches the training dataset."""
+    distribution = {note: sequence.count(note) for note in vocab}
+    total = sum(distribution.values())
+    return np.array([(count + epsilon) / (total + epsilon*len(vocab)) for count in distribution.values()])
+
+training_distribution = get_note_distribution(decode(train_data.tolist()), list(stoi.keys()))
+generated_distribution = get_note_distribution(filtered_sequence, list(stoi.keys()))
+kl_divergence = entropy(training_distribution, generated_distribution)
+print("KL Divergence (Lower is Better):", kl_divergence)
+
+def calculate_transition_matrix(sequence, vocab, epsilon=1e-8):
+    """Calculate transition probabilities between notes. This approach evaluates how closely the 
+    probabilities of transitioning between notes in generated melody aligns with those in the dataset."""
+    vocab_size = len(vocab)
+    matrix = np.zeros((vocab_size, vocab_size))
+
+    for i in range(len(sequence) - 1):
+        current_note = stoi[sequence[i]]
+        next_note = stoi[sequence[i + 1]]
+        matrix[current_note, next_note] += 1
+
+    # Normalize rows to get probabilities
+    matrix = matrix + epsilon
+    matrix = matrix / matrix.sum(axis=1, keepdims=True)
+    return matrix
+
+training_matrix = calculate_transition_matrix(decode(train_data.tolist()), list(stoi.keys()))
+generated_matrix = calculate_transition_matrix(filtered_sequence, list(stoi.keys()))
+mse = np.mean((training_matrix - generated_matrix) ** 2)
+print("Transition Matrix MSE (Lower is Better):", mse)
+
+def calculate_ngram_overlap(sequence, reference_sequence, n=4):
+    """Calculate n-gram overlap between two sequences. It measures how many short subsequences(n-grams)
+    in the generated melody overlap with those in the dataset."""
+    generated_ngrams = Counter(ngrams(sequence, n))
+    reference_ngrams = Counter(ngrams(reference_sequence, n))
+    overlap = sum((generated_ngrams & reference_ngrams).values())
+    total = sum(reference_ngrams.values())
+    return overlap / total if total > 0 else 0
+
+reference_sequence = decode(train_data.tolist())
+ngram_overlap = calculate_ngram_overlap(filtered_sequence, reference_sequence, n=4)
+print("N-Gram Overlap (Higher is Better):", ngram_overlap)
