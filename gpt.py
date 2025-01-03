@@ -157,9 +157,9 @@ class FeedForward(nn.Module):
     def __init__(self, n_embd):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, 4*n_embd),
+            nn.Linear(n_embd, 4*n_embd, bias=True),
             nn.ReLU(),
-            nn.Linear(4*n_embd, n_embd),
+            nn.Linear(4*n_embd, n_embd, bias=True),
             nn.Dropout(dropout),
         )
     def forward(self, x):
@@ -207,8 +207,8 @@ class SpecializedGPT(nn.Module):
         self.ln_f = nn.LayerNorm(n_embd)
 
         # Separate output heads
-        self.pitch_head   = nn.Linear(n_embd, pitch_vocab_size)
-        self.rhythm_head  = nn.Linear(n_embd, rhythm_vocab_size)
+        self.pitch_head   = nn.Linear(n_embd, pitch_vocab_size, bias=True)
+        self.rhythm_head  = nn.Linear(n_embd, rhythm_vocab_size, bias=True)
 
         self.apply(self._init_weights)
 
