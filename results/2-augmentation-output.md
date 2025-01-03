@@ -59,7 +59,7 @@ N-Gram Overlap (Higher is Better): 7.7372031047721e-05
   - Decreased significantly in the second attempt, indicating the model struggles to generate longer patterns that resemble those in the dataset.
 
 **Implications**:
-- While pitch distribution (KL Divergence) improved in the second attempt, temporal coherence (transition matrix and n-gram overlap) has not improved, and longer dependencies are notably weaker.
+- While pitch distribution (KL Divergence) improved in the second attempt, temporal coherence (transition matrix and n-gram overlap) has not improved, and longer dependencies are notably weaker. This could be because of the increase in the dataset size and reducing the Transition Matrix and N-gram overlap metrics.
 
 ---
 

@@ -1,27 +1,9 @@
-
-# -*- coding: utf-8 -*-
-"""
-@author: Giovanni Di Liberto
-See description in the assignment instructions.
-"""
-
 from pydub import AudioSegment
 import numpy as np
 import simpleaudio as sa
 
-# Define note frequencies (A4 = 440 Hz)
-#NOTE_FREQUENCIES = {
-#    'C': 261.63,
-#    'D': 293.66,
-#    'E': 329.63,
-#    'F': 349.23,
-#    'G': 392.00,
-#    'A': 440.00,
-#    'B': 493.88,
-#    'R': 0  # Rest (no sound)
-#}
-
-NOTE_FREQUENCIES = {
+# Define base note frequencies (A4 = 440 Hz)
+BASE_FREQUENCIES = {
     'C': 261.63,
     'c': 277.18,  # C#
     'D': 293.66,
@@ -34,8 +16,16 @@ NOTE_FREQUENCIES = {
     'A': 440.00,
     'a': 466.16,  # A#
     'B': 493.88,
-    'R': 0     # Rest
+    'R': 0  # Rest
 }
+
+# Generate note frequencies for octaves 1-8
+NOTE_FREQUENCIES = {
+    f"{note}{octave}": freq * (2 ** (octave - 4))
+    for octave in range(1, 9)
+    for note, freq in BASE_FREQUENCIES.items() if freq > 0
+}
+NOTE_FREQUENCIES['R'] = 0  # Rest remains unchanged
 
 
 # Generate a sine wave for a given frequency
@@ -53,23 +43,25 @@ def generate_sine_wave(frequency, duration_ms, sample_rate=44100, amplitude=0.5)
 
 # Function to create a sequence of notes
 def create_sequence(note_sequence, duration_ms=500):
+    note_sequence = note_sequence.split()
     song = AudioSegment.silent(duration=0)
     for note in note_sequence:
         if note == 'R':  # Handle rest
             segment = AudioSegment.silent(duration=duration_ms)
-        else:
+        elif note in NOTE_FREQUENCIES:
             frequency = NOTE_FREQUENCIES[note]
             segment = generate_sine_wave(frequency, duration_ms)
+        else:
+            raise ValueError(f"Invalid note: {note}")
         song += segment
     return song
 
-# Example sequence (You can replace this with your sequence)
-#sequence = "C C G G A A G F F E E D D C G G F F E E D G G F F E E D C C G G A A G F F E E D D C".split()
-sequence = "BDDgEARagadGCCdddEgfgcDEAGBDEFgA"
 
 def play_melody(sequence, name, duration_ms=500):
     song = create_sequence(sequence, duration_ms)
     song.export(f"{name}.wav", format="wav")
     wave_obj = sa.WaveObject.from_wave_file(f"{name}.wav")
 
-# play_melody(sequence)
+# Example sequence
+# sequence = "C4 D4 E4 R G4 A4 F4 E7 D7"
+# play_melody(sequence, "sample_melody")

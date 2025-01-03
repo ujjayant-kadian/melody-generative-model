@@ -1,16 +1,8 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Aug 25 21:10:09 2024
-
-@author: Giovanni Di Liberto
-See description in the assignment instructions.
-"""
-
 import os
 import shutil
 
 # Define the source directory and the target directory
-source_dir = './BiMMuDa/'  # Current directory
+source_dir = 'BiMMuDa'
 target_dir = 'musicDatasetOriginal'
 
 # Create the target directory if it doesn't exist

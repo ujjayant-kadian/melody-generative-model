@@ -1,27 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Aug 26 16:06:10 2024
-
-@author: Giovanni Di Liberto
-See description in the assignment instructions.
-"""
 import random
-
-# Define the note dictionary
-NOTE_FREQUENCIES = {
-    'C': 261.63,
-    'c': 277.18,  # C#
-    'D': 293.66,
-    'd': 311.13,  # D#
-    'E': 329.63,
-    'F': 349.23,
-    'f': 369.99,  # F#
-    'G': 392.00,
-    'g': 415.30,  # G#
-    'A': 440.00,
-    'a': 466.16,  # A#
-    'B': 493.88,
-}
 
 # List of notes in order
 NOTES = ['C', 'c', 'D', 'd', 'E', 'F', 'f', 'G', 'g', 'A', 'a', 'B']
@@ -31,73 +8,112 @@ def translate_notes(notes, shift):
     """
     Translate notes by a given shift (e.g., +1 for one semitone up).
     """
-    notes = notes.replace(' ', '')
+    notes = notes.split()  # Split input into individual notes
     translated_notes = []
+
     for note in notes:
-        if note in NOTES:
-            index = NOTES.index(note)
+        if note == 'R':  # Handle rests
+            translated_notes.append(note)
+            continue
+
+        # Extract the base note and octave
+        base_note = ''.join(filter(str.isalpha, note))
+        octave = ''.join(filter(str.isdigit, note))
+
+        if base_note in NOTES:
+            index = NOTES.index(base_note)
             new_index = (index + shift) % len(NOTES)
-            translated_notes.append(NOTES[new_index])
+            translated_note = NOTES[new_index] + octave
+            translated_notes.append(translated_note)
         else:
-            translated_notes.append(note)  # Keep the character as is if it's not a note
-    return ''.join(translated_notes)
+            translated_notes.append(note)  # Keep unknown tokens as is
+
+    return ' '.join(translated_notes)
+
 # Example usage
-#input_notes = "CDE"
-#shift = 1
-#output_notes = translate_notes(input_notes, shift)
-#print(output_notes)  # Output: cdF
+# input_notes = "C4 D4 E4"
+# shift = 1
+# output_notes = translate_notes(input_notes, shift)
+# print(output_notes)  # Output: "c4d4F4"
 
 def string_to_notes(melody_str):
     return melody_str.split()
 
 def notes_to_string(note_list):
-    return ''.join(note_list)
+    return ' '.join(note_list)
 
-def random_local_pitch_variation(note_list, probability=0.05):
+def random_local_pitch_variation(note_list, probability=0.01):
     """
     With a certain probability, shift note by ±1 semitone (mod 12).
     """
     new_notes = []
     for note in note_list:
-        if note == 'R' or note not in NOTE_SET:
+        if note == 'R':
             new_notes.append(note)
             continue
-        if random.random() < probability:
-            old_index = NOTES.index(note)
-            shift = random.choice([-1, +1])
-            new_index = (old_index + shift) % len(NOTES)
-            new_notes.append(NOTES[new_index])
+        base_note = ''.join(filter(str.isalpha, note))
+        octave = ''.join(filter(str.isdigit, note))
+        if base_note in NOTES:
+            if random.random() < probability:
+                old_index = NOTES.index(base_note)
+                shift = random.choice([-1, +1])
+                new_index = (old_index + shift) % len(NOTES)
+                varied_note = NOTES[new_index] + octave
+                new_notes.append(varied_note)
+            else:
+                new_notes.append(note)  # Keep the note unchanged
         else:
-            new_notes.append(note)
+            new_notes.append(note)  # Keep unknown tokens as is
     return new_notes
 # Example usage
-# note_list = ["C", "D", "E", "R", "G"]
+# note_list = ["C4", "D4", "E4", "R", "G4"]
 # pitch_var_notes = random_local_pitch_variation(note_list, probability=0.5)
-# print(pitch_var_notes)  # Output: ['C', 'c', 'E', 'R', 'F'] (randomized)
+# print(pitch_var_notes)  # Output: ['C4', 'c4', 'E4', 'R', 'F4'] (randomized)
 
-def invert_melody(note_list, reference_note='C'):
+def invert_melody(note_list, reference_note='C4'):
     """
-    Invert intervals around a chosen reference_note (e.g., 'C').
+    Invert intervals around a chosen reference_note (e.g., 'C4').
     """
-    if reference_note not in NOTES:
-        reference_note = 'C'
-    ref_idx = NOTES.index(reference_note)
+    reference_base = ''.join(filter(str.isalpha, reference_note))
+    reference_octave = ''.join(filter(str.isdigit, reference_note))
+    reference_octave = int(reference_octave) if reference_octave else 4
+    if reference_base not in NOTES:
+        reference_base = 'C'
+
+    ref_idx = NOTES.index(reference_base)
     new_notes = []
+
     for note in note_list:
-        if note == 'R' or note not in NOTE_SET:
+        if note == 'R':  # Handle rests
             new_notes.append(note)
-        else:
-            idx = NOTES.index(note)
+            continue
+
+        # Extract the base note and octave
+        base_note = ''.join(filter(str.isalpha, note))
+        octave = int(''.join(filter(str.isdigit, note)))
+
+        if base_note in NOTES:
+            idx = NOTES.index(base_note)
             # Distance from reference
             distance = idx - ref_idx
             # Invert the distance
             inverted_idx = (ref_idx - distance) % len(NOTES)
-            new_notes.append(NOTES[inverted_idx])
+            inverted_base = NOTES[inverted_idx]
+
+            # Adjust octave based on inversion
+            octave_shift = (ref_idx - distance) // len(NOTES)
+            inverted_octave = reference_octave + octave_shift
+
+            new_notes.append(inverted_base + str(inverted_octave))
+        else:
+            new_notes.append(note)  # Keep unknown tokens as is
+
     return new_notes
+
 # Example usage
-# note_list = ["C", "D", "E", "R", "G"]
-# inverted_notes = invert_melody(note_list, reference_note="C")
-# print(inverted_notes)  # Output: ['C', 'B', 'A', 'R', 'F']
+# note_list = ["C4", "D4", "E4", "R", "G4"]
+# inverted_notes = invert_melody(note_list, reference_note="C4")
+# print(inverted_notes)  # Output: ['C4', 'B3', 'A3', 'R', 'F3']
 
 
 def retrograde_melody(note_list):
@@ -106,9 +122,9 @@ def retrograde_melody(note_list):
     """
     return note_list[::-1]
 # Example usage
-# note_list = ["C", "D", "E", "R", "G"]
+# note_list = ["C4", "D4", "E4", "R", "G4"]
 # retrograde_notes = retrograde_melody(note_list)
-# print(retrograde_notes)  # Output: ['G', 'R', 'E', 'D', 'C']
+# print(retrograde_notes)  # Output: ['G4', 'R', 'E4', 'D4', 'C4']
 
 def insert_random_rests(note_list, probability=0.02):
     """
@@ -121,11 +137,11 @@ def insert_random_rests(note_list, probability=0.02):
             new_notes.append('R')
     return new_notes
 # Example usage
-# note_list = ["C", "D", "E", "F", "G"]
+# note_list = ["C4", "D4", "E4", "F4", "G4"]
 # notes_with_rests = insert_random_rests(note_list, probability=0.5)
-# print(notes_with_rests)  # Output: ['C', 'R', 'D', 'E', 'R', 'F', 'G'] (randomized)
+# print(notes_with_rests)  # Output: ['C4', 'R', 'D4', 'E4', 'R', 'F4', 'G4'] (randomized)
 
-def swap_adjacent_notes(note_list, probability=0.02):
+def swap_adjacent_notes(note_list, probability=0.005):
     """
     Randomly swap pairs of adjacent notes. 
     """
@@ -154,30 +170,34 @@ augmented_melodies = []
 
 for melody in input_melodies:
     melody = melody.strip()
+
+
     # Convert to a list of tokens
     note_list = string_to_notes(melody)
     
+    # Append original simplified melody
+    augmented_melodies.append(notes_to_string(note_list))
+
     # 1)
     for shift in shifts:
         shifted_notes = translate_notes(melody, shift)  # your existing function
         augmented_melodies.append(shifted_notes)
     
     # 2) Additional advanced transformations
-    # (Example: We'll do random local pitch variation + insertion of rests)
     
-    # a) Local pitch variation
-    pitch_var_notes = random_local_pitch_variation(note_list, probability=0.05)
-    # b) Insert rests
-    pitch_var_notes = insert_random_rests(pitch_var_notes, probability=0.02)
+    # Local pitch variation
+    pitch_var_notes = random_local_pitch_variation(note_list)
+    # Insert rests
+    # pitch_var_notes = insert_random_rests(pitch_var_notes, probability=0.02)
     pitch_var_str = notes_to_string(pitch_var_notes)
     augmented_melodies.append(pitch_var_str)
     
-    # d) Inversion
-    inverted_notes = invert_melody(note_list, reference_note='C')
+    # Inversion
+    inverted_notes = invert_melody(note_list, reference_note='C4')
     inv_str = notes_to_string(inverted_notes)
     augmented_melodies.append(inv_str)
     
-    # e) Retrograde
+    # Retrograde
     retro_notes = retrograde_melody(note_list)
     retro_str = notes_to_string(retro_notes)
     augmented_melodies.append(retro_str)

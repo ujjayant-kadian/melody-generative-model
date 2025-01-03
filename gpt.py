@@ -31,13 +31,13 @@ with open('inputMelodiesAugmented.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 
 # here are all the unique characters that occur in this text
-chars = sorted(list(set(text)))
+chars = sorted(list(set(text.split())))
 vocab_size = len(chars)
 # create a mapping from characters to integers
 stoi = { ch:i for i,ch in enumerate(chars) }
 itos = { i:ch for i,ch in enumerate(chars) }
-encode = lambda s: [stoi[c] for c in s] # encoder: take a string, output a list of integers
-decode = lambda l: ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
+encode = lambda s: [stoi[token] for token in s.split()] # encoder: take a note, output a list of integers
+decode = lambda l: ' '.join([itos[i] for i in l]) # decoder: take a list of integers, output a note
 
 # Train and test splits
 data = torch.tensor(encode(text), dtype=torch.long)
@@ -208,7 +208,9 @@ def calculate_perplexity(loss):
 
 # Baseline comparison
 def generate_random_melody(length):
-    return ''.join(random.choices(chars, k=length))
+    notes_with_octaves = list(NOTE_FREQUENCIES.keys())
+    melody = random.choices(notes_with_octaves, k=length)
+    return ' '.join(melody)
 
 model = GPTLanguageModel().to(device)
 if os.path.exists(model_save_path):
@@ -243,16 +245,25 @@ else:
     print(f"Saving model to {model_save_path}")
     torch.save(model.state_dict(), model_save_path)
 
-valid_chars = set("".join(NOTE_FREQUENCIES.keys()))
 # generate from the model
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
 generated_sequence = decode(model.generate(context, max_new_tokens=100)[0].tolist())
 print("Generated Melody:", generated_sequence)
-filtered_sequence = "".join([char for char in generated_sequence if char in valid_chars])
-play_melody(filtered_sequence, "generated_melody")
+
+# def validate_and_filter_sequence(sequence):
+#     valid_tokens = set(NOTE_FREQUENCIES.keys())
+#     tokens = sequence.split()
+#     filtered_tokens = [token for token in tokens if token in valid_tokens]
+#     return filtered_tokens
+
+# filtered_sequence = validate_and_filter_sequence(generated_sequence)
+
+# filtered_sequence_str = " ".join(filtered_sequence)
+play_melody(generated_sequence, "generated_melody")
+
 #open('more.txt', 'w').write(decode(m.generate(context, max_new_tokens=10000)[0].tolist()))
 
-baseline_melody = "".join([char for char in generate_random_melody(100) if char in valid_chars])
+baseline_melody = generate_random_melody(100)
 print("Baseline Melody:", baseline_melody)
 play_melody(baseline_melody, "baseline_melody")
 
@@ -265,8 +276,8 @@ def get_note_distribution(sequence, vocab, epsilon=1e-8):
     total = sum(distribution.values())
     return np.array([(count + epsilon) / (total + epsilon*len(vocab)) for count in distribution.values()])
 
-training_distribution = get_note_distribution(decode(train_data.tolist()), list(stoi.keys()))
-generated_distribution = get_note_distribution(filtered_sequence, list(stoi.keys()))
+training_distribution = get_note_distribution(decode(train_data.tolist()).split(), list(stoi.keys()))
+generated_distribution = get_note_distribution(generated_sequence.split(), list(stoi.keys()))
 kl_divergence = entropy(training_distribution, generated_distribution)
 print("KL Divergence (Lower is Better):", kl_divergence)
 
@@ -286,8 +297,8 @@ def calculate_transition_matrix(sequence, vocab, epsilon=1e-8):
     matrix = matrix / matrix.sum(axis=1, keepdims=True)
     return matrix
 
-training_matrix = calculate_transition_matrix(decode(train_data.tolist()), list(stoi.keys()))
-generated_matrix = calculate_transition_matrix(filtered_sequence, list(stoi.keys()))
+training_matrix = calculate_transition_matrix(decode(train_data.tolist()).split(), list(stoi.keys()))
+generated_matrix = calculate_transition_matrix(generated_sequence.split(), list(stoi.keys()))
 mse = np.mean((training_matrix - generated_matrix) ** 2)
 print("Transition Matrix MSE (Lower is Better):", mse)
 
@@ -300,6 +311,6 @@ def calculate_ngram_overlap(sequence, reference_sequence, n=4):
     total = sum(reference_ngrams.values())
     return overlap / total if total > 0 else 0
 
-reference_sequence = decode(train_data.tolist())
-ngram_overlap = calculate_ngram_overlap(filtered_sequence, reference_sequence, n=4)
+reference_sequence = decode(train_data.tolist()).split()
+ngram_overlap = calculate_ngram_overlap(generated_sequence.split(), reference_sequence, n=4)
 print("N-Gram Overlap (Higher is Better):", ngram_overlap)
