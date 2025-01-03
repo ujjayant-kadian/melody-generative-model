@@ -1,5 +1,5 @@
 #######################################
-# gpt.py - Two-Dimensional GPT + Metrics
+# Melody GPT
 #######################################
 import os
 import random
@@ -34,14 +34,13 @@ random_seed = 1337
 torch.manual_seed(random_seed)
 
 #######################################
-# 1) Read dataset + Build vocab
+# Read dataset + Build pitch and rhythm vocab
 #######################################
 with open('inputMelodiesAugmented.txt', 'r', encoding='utf-8') as f:
     raw_text = f.read().strip()
 
 lines = raw_text.split('\n')
 
-# We'll collect tokens for a global set if needed, but main focus is pitch/rhythm vocab
 all_token_pairs = []  # (pitch, rhythm)
 pitch_set = set()
 rhythm_set = set()
@@ -64,9 +63,12 @@ for line in lines:
         rhythm_set.add(r)
         all_token_pairs.append((p, r))
 
+# Here are all the unique notes that occur in the text
 pitch_vocab = sorted(list(pitch_set))
+# The rythm of the melodies -> either a 'NOTE' or 'REST'
 rhythm_vocab = sorted(list(rhythm_set))
 
+# Mapping of pitch and rhythm to integers
 pitch_stoi = {p: i for i, p in enumerate(pitch_vocab)}
 pitch_itos = {i: p for p, i in pitch_stoi.items()}
 rhythm_stoi = {r: i for i, r in enumerate(rhythm_vocab)}
@@ -92,13 +94,14 @@ data_size = len(pitch_ids)
 print("Data size (# tokens):", data_size)
 
 # Train/Val split
-split_idx = int(0.9 * data_size)
+split_idx = int(0.9 * data_size) # first 90% will be train, rest val
 pitch_train = pitch_ids[:split_idx]
 pitch_val = pitch_ids[split_idx:]
 rhythm_train = rhythm_ids[:split_idx]
 rhythm_val = rhythm_ids[split_idx:]
 
 def get_batch(split):
+    """ generate a small batch of data of inputs x and targets y (for both pitch and rhythm) """
     if split == 'train':
         data_pitch = pitch_train
         data_rhythm = rhythm_train
@@ -115,32 +118,37 @@ def get_batch(split):
     return x_pitch, x_rhythm, y_pitch, y_rhythm
 
 #######################################
-# 2) Specialized GPT Implementation
+# Specialized GPT Implementation
 #######################################
 class Head(nn.Module):
-    """One head of self-attention."""
+    """ one head of self-attention. """
     def __init__(self, head_size):
         super().__init__()
         self.key   = nn.Linear(n_embd, head_size, bias=False)
         self.query = nn.Linear(n_embd, head_size, bias=False)
         self.value = nn.Linear(n_embd, head_size, bias=False)
         self.register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))
+
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
+        # input of size (batch, time-step, channels)
+        # output of size (batch, time-step, head size)
         B, T, C = x.shape
-        k = self.key(x)
-        q = self.query(x)
-        wei = q @ k.transpose(-2, -1) * (C**-0.5)
-        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
-        wei = F.softmax(wei, dim=-1)
+        k = self.key(x)   # (B,T,hs)
+        q = self.query(x) # (B,T,hs)
+        # compute attention scores ("affinities")
+        wei = q @ k.transpose(-2, -1) * (C**-0.5) # (B, T, hs) @ (B, hs, T) -> (B, T, T)
+        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf')) # (B, T, T)
+        wei = F.softmax(wei, dim=-1) # (B, T, T)
         wei = self.dropout(wei)
-        v = self.value(x)
-        out = wei @ v
+        # perform the weighted aggregation of the values
+        v = self.value(x) # (B,T,hs)
+        out = wei @ v # (B, T, T) @ (B, T, hs) -> (B, T, hs)
         return out
 
 class MultiHeadAttention(nn.Module):
-    """Multiple heads of self-attention in parallel."""
+    """ multiple heads of self-attention in parallel. """
     def __init__(self, num_heads, head_size):
         super().__init__()
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
@@ -153,7 +161,7 @@ class MultiHeadAttention(nn.Module):
         return out
 
 class FeedForward(nn.Module):
-    """2-layer feed-forward."""
+    """ a simple linear layer followed by a non-linearity """
     def __init__(self, n_embd):
         super().__init__()
         self.net = nn.Sequential(
@@ -166,8 +174,10 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 class Block(nn.Module):
-    """Transformer block: self-attention + feed-forward."""
+    """ Transformer block: self-attention + feed-forward. """
+
     def __init__(self, n_embd, n_head):
+        # n_embd: embedding dimension, n_head: the number of heads we'd like
         super().__init__()
         head_size = n_embd // n_head
         self.sa = MultiHeadAttention(n_head, head_size)
@@ -195,7 +205,7 @@ class SpecializedGPT(nn.Module):
         self.block_size = block_size
         self.device = device
         
-        # Embeddings
+        # Seperate embeddings for pitch and rhythm
         self.pitch_embedding_table = nn.Embedding(pitch_vocab_size, n_embd)
         self.rhythm_embedding_table = nn.Embedding(rhythm_vocab_size, n_embd)
         self.position_embedding_table = nn.Embedding(block_size, n_embd)
@@ -260,7 +270,7 @@ class SpecializedGPT(nn.Module):
         return pitch_context, rhythm_context
 
 #######################################
-# 3) Setup, Train or Load
+# Setup, Train or Load
 #######################################
 model = SpecializedGPT(
     pitch_vocab_size,
@@ -286,6 +296,7 @@ def estimate_loss():
             _, loss = model(xP, xR, (yP, yR))
             losses.append(loss.item())
         avg_loss = sum(losses) / len(losses)
+        # Adding perplexity for better understanding of loss and how does it decrease every iteration
         perplexity = torch.exp(torch.tensor(avg_loss))
         out[split] = {'loss': avg_loss, 'perplexity': perplexity.item()}
     model.train()
@@ -314,7 +325,7 @@ else:
     print(f"Model saved to {model_save_path}")
 
 #######################################
-# 4) Generate a Sample
+# Generate a Sample
 #######################################
 model.eval()
 start_pitch = torch.tensor([[pitch_stoi['R']]], dtype=torch.long, device=device)
@@ -330,7 +341,7 @@ def decode_pitch_rhythm(p_id, r_id):
     else:
         return p_token
 
-# Flatten out the first (and only) batch
+# Flatten out the generated output to get the final note sequence
 generated_sequence_ids = list(zip(gen_pitch[0].tolist(), gen_rhythm[0].tolist()))
 generated_sequence = [decode_pitch_rhythm(p_id, r_id) for (p_id, r_id) in generated_sequence_ids]
 
@@ -338,14 +349,10 @@ print("Generated Melody:", ' '.join(generated_sequence))
 play_melody(' '.join(generated_sequence), "generated_melody")
 
 ###########################################
-# 8) Baseline Model: Random Melody
+# Baseline Model: Random Melody
 ###########################################
 def generate_random_melody(length=100):
-    """
-    Generate a random melody from the global_tokens (any token).
-    or purely from pitch_vocab, if you want only pitches + rests.
-    """
-    # If you want purely pitch-based random melody:
+    """ Generate a random melody purely from pitch_vocab """
     pitch_list = list(pitch_stoi.keys())
     melody = [random.choice(pitch_list) for _ in range(length)]
     return ' '.join(melody)
@@ -355,8 +362,8 @@ print("Baseline Melody:", baseline_melody)
 play_melody(baseline_melody, "baseline_melody")
 
 #######################################
-# 5) Adapted Fidelity Metrics
-#    (Pitch & Rhythm separately)
+# Fidelity Metrics
+# (Pitch & Rhythm separately)
 #######################################
 def compute_distribution_counts(ids, vocab_size):
     counts = np.zeros(vocab_size, dtype=np.float64)
@@ -365,15 +372,15 @@ def compute_distribution_counts(ids, vocab_size):
     return counts
 
 def compute_normalized_distribution(ids, vocab_size, epsilon=1e-8):
+    """ Calculate note distribution as normalized frequency to see how closely the distribution
+    of pitch/rhythm in generated melody matches the training dataset. """
     counts = compute_distribution_counts(ids, vocab_size)
     total = np.sum(counts)
     dist = (counts + epsilon) / (total + epsilon * vocab_size)
     return dist
 
 def kl_divergence(real_ids, gen_ids, vocab_size):
-    """
-    Compare distribution of real_ids vs. gen_ids (pitch or rhythm).
-    """
+    """ Compare distribution of real_ids vs. gen_ids (pitch or rhythm). """
     real_dist = compute_normalized_distribution(real_ids, vocab_size)
     gen_dist  = compute_normalized_distribution(gen_ids, vocab_size)
     return entropy(real_dist, gen_dist)
@@ -389,11 +396,15 @@ def calculate_transition_matrix(ids, vocab_size, epsilon=1e-8):
     return matrix
 
 def transition_matrix_mse(real_ids, gen_ids, vocab_size):
+    """ Calculate transition probabilities between pitch/rhythm. This approach evaluates how closely the 
+    probabilities of transitioning between notes in generated melody aligns with those in the dataset. """
     real_matrix = calculate_transition_matrix(real_ids, vocab_size)
     gen_matrix  = calculate_transition_matrix(gen_ids, vocab_size)
     return np.mean((real_matrix - gen_matrix)**2)
 
 def ngram_overlap(ref_ids, gen_ids, n=4):
+    """ Calculate n-gram overlap between two sequences. It measures how many short subsequences(n-grams)
+    in the generated melody overlap with those in the dataset. """
     ref_ngrams = Counter(list(ngrams(ref_ids, n)))
     gen_ngrams = Counter(list(ngrams(gen_ids, n)))
     overlap_count = sum((ref_ngrams & gen_ngrams).values())
@@ -401,10 +412,8 @@ def ngram_overlap(ref_ids, gen_ids, n=4):
     return overlap_count / total if total > 0 else 0
 
 ############################################
-# 6) Evaluate on pitch and rhythm separately
+# Evaluate on pitch and rhythm separately with the training dataset
 ############################################
-# We'll treat the training set as "real data".
-# (Or you might have a separate "test set".)
 real_pitch_ids_np = pitch_train.cpu().numpy()
 real_rhythm_ids_np = rhythm_train.cpu().numpy()
 
@@ -412,20 +421,20 @@ real_rhythm_ids_np = rhythm_train.cpu().numpy()
 generated_pitch_ids_np = np.array(gen_pitch[0].tolist(), dtype=np.int32)
 generated_rhythm_ids_np = np.array(gen_rhythm[0].tolist(), dtype=np.int32)
 
-# 6a) KL Divergence
+# KL Divergence
 pitch_kl = kl_divergence(real_pitch_ids_np, generated_pitch_ids_np, pitch_vocab_size)
 rhythm_kl = kl_divergence(real_rhythm_ids_np, generated_rhythm_ids_np, rhythm_vocab_size)
-print(f"[Pitch] KL Divergence: {pitch_kl:.4f}")
-print(f"[Rhythm] KL Divergence: {rhythm_kl:.4f}")
+print(f"[Pitch] KL Divergence (Lower is better): {pitch_kl:.4f}")
+print(f"[Rhythm] KL Divergence (Lower is better): {rhythm_kl:.4f}")
 
-# 6b) Transition Matrix MSE
+# Transition Matrix MSE
 pitch_trans_mse = transition_matrix_mse(real_pitch_ids_np, generated_pitch_ids_np, pitch_vocab_size)
 rhythm_trans_mse = transition_matrix_mse(real_rhythm_ids_np, generated_rhythm_ids_np, rhythm_vocab_size)
-print(f"[Pitch] Transition Matrix MSE: {pitch_trans_mse:.6f}")
-print(f"[Rhythm] Transition Matrix MSE: {rhythm_trans_mse:.6f}")
+print(f"[Pitch] Transition Matrix MSE (Lower is better): {pitch_trans_mse:.6f}")
+print(f"[Rhythm] Transition Matrix MSE (Lower is better): {rhythm_trans_mse:.6f}")
 
-# 6c) N-gram Overlap (4-gram by default)
+# N-gram Overlap (4-gram by default)
 pitch_ngram_overlap = ngram_overlap(real_pitch_ids_np, generated_pitch_ids_np, n=4)
 rhythm_ngram_overlap = ngram_overlap(real_rhythm_ids_np, generated_rhythm_ids_np, n=4)
-print(f"[Pitch] 4-gram Overlap: {pitch_ngram_overlap:.4f}")
-print(f"[Rhythm] 4-gram Overlap: {rhythm_ngram_overlap:.4f}")
+print(f"[Pitch] n-gram Overlap (Higher is better): {pitch_ngram_overlap:.4f}")
+print(f"[Rhythm] n-gram Overlap (Higher is better): {rhythm_ngram_overlap:.4f}")
